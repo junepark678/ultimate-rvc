@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Unpack
 
 import logging
 import os
+import pathlib
 import sys
 import time
 import traceback
@@ -28,20 +29,28 @@ from pedalboard import (
     Reverb,
 )
 
-now_dir = os.getcwd()
+now_dir = pathlib.Path.cwd()
 sys.path.append(now_dir)
 
 import lazy_loader as lazy
 
+import pathlib
+
 from ultimate_rvc.rvc.configs.config import Config
 from ultimate_rvc.rvc.infer.pipeline import Pipeline as VC
 from ultimate_rvc.rvc.infer.typing_extra import ConvertAudioKwArgs
+from ultimate_rvc.rvc.lib.accelerate_utils import (
+    create_inference_accelerator,
+    prepare_inference_model,
+)
 from ultimate_rvc.rvc.lib.algorithm.synthesizers import Synthesizer
 from ultimate_rvc.rvc.lib.tools.split_audio import merge_audio, process_audio
 from ultimate_rvc.rvc.lib.utils import load_audio_infer, load_embedding
 from ultimate_rvc.typing_extra import F0Method
 
 if TYPE_CHECKING:
+    from accelerate import Accelerator
+
     import noisereduce as nr
 else:
     nr = lazy.load("noisereduce")
@@ -58,11 +67,23 @@ class VoiceConverter:
     A class for performing voice conversion using the Retrieval-Based Voice Conversion (RVC) method.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        accelerator: "Accelerator | None" = None,
+    ):
         """
-        Initializes the VoiceConverter with default configuration, and sets up models and parameters.
+        Initializes the VoiceConverter with default configuration, and
+        sets up models and parameters.
+
+        Parameters
+        ----------
+        accelerator : Accelerator | None, optional
+            Hugging Face Accelerator instance for distributed
+            inference. Default is None.
+
         """
         self.config = Config()  # Load configuration
+        self.accelerator = accelerator
         self.hubert_model = (
             None  # Initialize the Hubert model (for embedding extraction)
         )
@@ -76,6 +97,12 @@ class VoiceConverter:
         self.use_f0 = None  # Whether the model uses F0
         self.loaded_model = None
 
+        # Create accelerator if enabled but not provided
+        if self.accelerator is None and os.getenv(
+            "URVC_ENABLE_ACCELERATE", "false"
+        ).lower() == "true":
+            self.accelerator = create_inference_accelerator()
+
     def load_hubert(self, embedder_model: str, embedder_model_custom: str = None):
         """
         Loads the HuBERT model for speaker embedding extraction.
@@ -86,7 +113,13 @@ class VoiceConverter:
 
         """
         self.hubert_model = load_embedding(embedder_model, embedder_model_custom)
-        self.hubert_model = self.hubert_model.to(self.config.device).float()
+        if self.accelerator is not None:
+            logger.info("Preparing HuBERT model with Accelerate for inference")
+            self.hubert_model = prepare_inference_model(
+                self.accelerator, self.hubert_model
+            )
+        else:
+            self.hubert_model = self.hubert_model.to(self.config.device).float()
         self.hubert_model.eval()
 
     @staticmethod
@@ -394,10 +427,7 @@ class VoiceConverter:
         """
         pid = os.getpid()
         try:
-            with open(
-                os.path.join(now_dir, "assets", "infer_pid.txt"),
-                "w",
-            ) as pid_file:
+            with pathlib.Path(os.path.join(now_dir, "assets", "infer_pid.txt")).open("w") as pid_file:
                 pid_file.write(str(pid))
             start_time = time.time()
             print(f"Converting audio batch '{audio_input_paths}'...")
@@ -427,7 +457,7 @@ class VoiceConverter:
                 new_input = os.path.join(audio_input_paths, a)
                 new_output = os.path.splitext(a)[0] + "_output.wav"
                 new_output = os.path.join(audio_output_path, new_output)
-                if os.path.exists(new_output):
+                if pathlib.Path(new_output).exists():
                     continue
                 self.convert_audio(
                     audio_input_path=new_input,
@@ -441,7 +471,7 @@ class VoiceConverter:
             print(f"An error occurred during audio batch conversion: {error}")
             print(traceback.format_exc())
         finally:
-            os.remove(os.path.join(now_dir, "assets", "infer_pid.txt"))
+            pathlib.Path(os.path.join(now_dir, "assets", "infer_pid.txt")).unlink()
 
     def get_vc(self, weight_root, sid):
         """
@@ -489,7 +519,7 @@ class VoiceConverter:
         """
         self.cpt = (
             torch.load(weight_root, map_location="cpu", weights_only=False)
-            if os.path.isfile(weight_root)
+            if pathlib.Path(weight_root).is_file()
             else None
         )
 
@@ -513,7 +543,11 @@ class VoiceConverter:
             )
             del self.net_g.enc_q
             self.net_g.load_state_dict(self.cpt["weight"], strict=False)
-            self.net_g = self.net_g.to(self.config.device).float()
+            if self.accelerator is not None:
+                logger.info("Preparing model with Accelerate for inference")
+                self.net_g = prepare_inference_model(self.accelerator, self.net_g)
+            else:
+                self.net_g = self.net_g.to(self.config.device).float()
             self.net_g.eval()
 
     def setup_vc_instance(self):

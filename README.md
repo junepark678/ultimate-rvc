@@ -34,7 +34,6 @@ Courtesy of [Social & Apps](https://www.youtube.com/@socialapps1194)
 
 For those without a powerful enough NVIDIA GPU, you may try out Ultimate RV using [Google Colab](https://colab.research.google.com/github/JackismyShephard/ultimate-rvc/blob/main/notebooks/ultimate_rvc_colab.ipynb). Additionally, Ultimate RVC is also hosted on [Huggingface Spaces](https://huggingface.co/spaces/JackismyShephard/ultimate-rvc), although GPU acceleration is not available there. For those who want to run Ultimate RVC locally, follow the setup guide below.
 
-
 ## Local Setup
 
 The Ultimate RVC project currently supports Windows and Debian-based Linux distributions, namely Ubuntu 22.04 and Ubuntu 24.04. Support for other platforms is not guaranteed.

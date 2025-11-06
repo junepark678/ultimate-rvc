@@ -3,6 +3,7 @@ import glob
 import json
 import logging
 import os
+import pathlib
 import shutil
 import signal
 import sys
@@ -157,7 +158,7 @@ def main(
     global_gen_loss = manager.list([0] * total_epoch)
     global_disc_loss = manager.list([0] * total_epoch)
 
-    with open(config_save_path) as f:
+    with pathlib.Path(config_save_path).open() as f:
         config = json.load(f)
     config = HParams(**config)
     config.data.training_files = os.path.join(experiment_dir, "filelist.txt")
@@ -194,13 +195,13 @@ def main(
         """Start the training process with multi-GPU support or CPU."""
         children = []
         pid_data = {"process_pids": []}
-        with open(config_save_path) as pid_file:
+        with pathlib.Path(config_save_path).open() as pid_file:
             try:
                 existing_data = json.load(pid_file)
                 pid_data.update(existing_data)
             except json.JSONDecodeError:
                 pass
-        with open(config_save_path, "w") as pid_file:
+        with pathlib.Path(config_save_path).open("w") as pid_file:
             for rank, device_id in enumerate(gpus):
                 subproc = mp.Process(
                     target=run,
@@ -261,7 +262,7 @@ def main(
             if entry.is_file():
                 _, file_extension = os.path.splitext(entry.name)
                 if file_extension in {".0", ".pth", ".index"}:
-                    os.remove(entry.path)
+                    pathlib.Path(entry.path).unlink()
             elif entry.is_dir() and entry.name == "eval":
                 shutil.rmtree(entry.path)
 
@@ -514,9 +515,7 @@ def run(
     cache = []
     # get the first sample as reference for tensorboard evaluation
     # custom reference temporarily disabled
-    if True == False and os.path.isfile(
-        os.path.join(RVC_TRAINING_MODELS_DIR, "reference", f"ref{sample_rate}.wav"),
-    ):
+    if True == False and pathlib.Path(os.path.join(RVC_TRAINING_MODELS_DIR, "reference", f"ref{sample_rate}.wav")).is_file():
         phone = np.load(
             os.path.join(
                 RVC_TRAINING_MODELS_DIR,
@@ -603,6 +602,7 @@ def run(
             cache_data_in_gpu,
             global_gen_loss,
             global_disc_loss,
+            accelerator=None,
         )
 
 
@@ -633,6 +633,7 @@ def train_and_evaluate(
     cache_data_in_gpu,
     global_gen_loss,
     global_disc_loss,
+    accelerator: "Accelerator | None" = None,
 ) -> None:
     """Train and evaluates the model for one epoch."""
     global global_step, lowest_g_value, lowest_d_value, consecutive_increases_gen, consecutive_increases_disc
@@ -741,7 +742,13 @@ def train_and_evaluate(
             avg_losses["mel_loss_50"].append(loss_mel.detach())
             avg_losses["gen_loss_50"].append(loss_gen_all.detach())
 
-            if rank == 0 and global_step % 50 == 0:
+            if (
+                (
+                    accelerator is not None
+                    and accelerator.is_main_process
+                )
+                or (accelerator is None and rank == 0)
+            ) and global_step % 50 == 0:
                 # logging rolling averages
                 scalar_dict = {
                     "grad_avg_50/norm_d": (
@@ -781,7 +788,9 @@ def train_and_evaluate(
     with torch.no_grad():
         torch.cuda.empty_cache()
     # Logging and checkpointing
-    if rank == 0:
+    if (accelerator is not None and accelerator.is_main_process) or (
+        accelerator is None and rank == 0
+    ):
         avg_global_disc_loss = global_disc_loss[epoch - 1] / len(train_loader.dataset)
         avg_global_gen_loss = global_gen_loss[epoch - 1] / len(train_loader.dataset)
 
@@ -903,7 +912,9 @@ def train_and_evaluate(
         # every N epochs
         if epoch % save_every_epoch == 0:
             with torch.no_grad():
-                if hasattr(net_g, "module"):
+                if accelerator is not None:
+                    o, *_ = accelerator.unwrap_model(net_g).infer(*reference)
+                elif hasattr(net_g, "module"):
                     o, *_ = net_g.module.infer(*reference)
                 else:
                     o, *_ = net_g.infer(*reference)
@@ -940,6 +951,7 @@ def train_and_evaluate(
                 lowest_g_value,
                 consecutive_increases_gen,
                 os.path.join(experiment_dir, f"G_{idx}.pth"),
+                accelerator=accelerator,
             )
             save_checkpoint(
                 net_d,
@@ -949,13 +961,17 @@ def train_and_evaluate(
                 lowest_d_value,
                 consecutive_increases_disc,
                 os.path.join(experiment_dir, f"D_{idx}.pth"),
+                accelerator=accelerator,
             )
         if model_add:
-            ckpt = (
-                net_g.module.state_dict()
-                if hasattr(net_g, "module")
-                else net_g.state_dict()
-            )
+            if accelerator is not None:
+                ckpt = accelerator.unwrap_model(net_g).state_dict()
+            else:
+                ckpt = (
+                    net_g.module.state_dict()
+                    if hasattr(net_g, "module")
+                    else net_g.state_dict()
+                )
             for m in model_add:
                 extract_model(
                     ckpt=ckpt,
@@ -987,9 +1003,9 @@ def train_and_evaluate(
             torch.cuda.empty_cache()
         if done:
             pid_file_path = os.path.join(experiment_dir, "config.json")
-            with open(pid_file_path) as pid_file:
+            with pathlib.Path(pid_file_path).open() as pid_file:
                 pid_data = json.load(pid_file)
-            with open(pid_file_path, "w") as pid_file:
+            with pathlib.Path(pid_file_path).open("w") as pid_file:
                 pid_data.pop("process_pids", None)
                 json.dump(pid_data, pid_file, indent=4)
             os._exit(0)

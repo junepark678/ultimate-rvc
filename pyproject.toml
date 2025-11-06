@@ -33,12 +33,13 @@ dependencies = [
   # Machine learning
   "torchcrepe==0.0.23",
   "faiss-cpu==1.10.0",
-  # Version of onnxruntime-gpu needs to align with what 
+  # Version of onnxruntime-gpu needs to align with what
   # version audio-separator package uses.
   "onnxruntime-gpu==1.20.1",
   "local-attention==1.11.1",
   "einops==0.8.1",
   "transformers==4.49.0",
+  "accelerate>=1.2.1",
   "tensorboardX==2.6.2.2",
   "tensorboard==2.19.0",
   "torch-tb-profiler==0.4.3",
@@ -220,6 +221,7 @@ section-order = [
   "transformers",
   "torchcrepe",
   "faiss",
+  "accelerate",
   "tensorboard",
   "local_attention",
   "einops",
