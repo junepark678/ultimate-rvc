@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 from collections.abc import Mapping, Sequence
 from enum import IntEnum, StrEnum
 from os import PathLike
 
-type StrPath = str | PathLike[str]
+StrPath: TypeAlias = str | PathLike[str]
 
-type Json = Mapping[str, Json] | Sequence[Json] | str | int | float | bool | None
+Json: TypeAlias = (
+    Mapping[str, "Json"] | Sequence["Json"] | str | int | float | bool | None
+)
 
 
 class SeparationModel(StrEnum):

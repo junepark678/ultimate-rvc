@@ -5,7 +5,7 @@ configurations.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeAlias, TypeVar
 
 from pathlib import Path
 
@@ -39,7 +39,7 @@ T = TypeVar("T", bound=Component)
 
 # NOTE: pydantic does not yet seem to be fully compatible with the
 # new generics syntax (3.12+) so we use the old one
-class ComponentConfig(BaseModel, Generic[U, T]):  # noqa: UP046
+class ComponentConfig(BaseModel, Generic[U, T]):
     """
     Base model defining common fields and logic for configuration and
     storage of a UI component.
@@ -136,10 +136,10 @@ class ComponentConfig(BaseModel, Generic[U, T]):  # noqa: UP046
         return ordered_mapping | remaining_mapping
 
 
-type AnyComponentConfig = ComponentConfig[Any, Any]
+AnyComponentConfig: TypeAlias = ComponentConfig[Any, Any]
 
 
-class InfoComponentConfig(ComponentConfig[U, T], Generic[U, T]):  # noqa: UP046
+class InfoComponentConfig(ComponentConfig[U, T], Generic[U, T]):
     """
     Configuration settings for a component with an information text.
 

@@ -7,7 +7,7 @@ name = "ultimate-rvc"
 version = "0.5.15"
 description = "Ultimate RVC"
 readme = "README.md"
-requires-python = "==3.12.*"
+requires-python = ">=3.10.13,<3.11"
 dependencies = [
   #Validation
   "pydantic==2.11.3",
@@ -116,7 +116,7 @@ explicit = true
 
 [tool.pyright]
 stubPath = "src/ultimate_rvc/stubs"
-pythonVersion = "3.12"
+pythonVersion = "3.10"
 pythonPlatform = "All"
 typeCheckingMode = "strict"
 ignore = ["**/.venv"]
@@ -125,12 +125,12 @@ venvPath = "."
 venv = "uv/.venv"
 
 [tool.black]
-target-version = ['py312']
+target-version = ['py310']
 preview = true
 enable-unstable-feature = ["string_processing"]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py310"
 fix = true
 required-version = ">=0.5.7"
 

@@ -5,21 +5,23 @@ RVC project.
 
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import Any, TypeAlias, TypedDict
 
 from collections.abc import Callable, Sequence
 from enum import StrEnum, auto
 
-type AnyCallable = Callable[..., Any]
+AnyCallable: TypeAlias = Callable[..., Any]
 
-type BaseDropdownChoices = Sequence[str | int | float | tuple[str, str | int | float]]
-type DropdownChoices = BaseDropdownChoices | None
-type BaseDropdownValue = str | int | float | Sequence[str | int | float] | None
-type DropdownValue = BaseDropdownValue | AnyCallable
+BaseDropdownChoices: TypeAlias = Sequence[
+    str | int | float | tuple[str, str | int | float]
+]
+DropdownChoices: TypeAlias = BaseDropdownChoices | None
+BaseDropdownValue: TypeAlias = str | int | float | Sequence[str | int | float] | None
+DropdownValue: TypeAlias = BaseDropdownValue | AnyCallable
 
-type RadioChoices = DropdownChoices
-type BaseRadioValue = str | int | float | None
-type RadioValue = BaseRadioValue | AnyCallable
+RadioChoices: TypeAlias = DropdownChoices
+BaseRadioValue: TypeAlias = str | int | float | None
+RadioValue: TypeAlias = BaseRadioValue | AnyCallable
 
 
 class ConcurrencyId(StrEnum):
