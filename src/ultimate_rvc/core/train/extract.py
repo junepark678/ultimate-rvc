@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from multiprocessing import cpu_count
 
+import spaces
+
 from ultimate_rvc.core.common import (
     display_progress,
     get_combined_file_hash,
@@ -25,6 +27,7 @@ from ultimate_rvc.typing_extra import (
 )
 
 
+@spaces.GPU(duration=120)
 def extract_features(
     model_name: str,
     f0_method: TrainingF0Method = TrainingF0Method.RMVPE,
