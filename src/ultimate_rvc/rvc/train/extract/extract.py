@@ -2,8 +2,8 @@ import concurrent.futures
 import glob
 import json
 import logging
-import multiprocessing as mp
 import os
+import pathlib
 import sys
 import time
 
@@ -13,7 +13,7 @@ import tqdm
 import torch
 import torchcrepe
 
-now_dir = os.getcwd()
+now_dir = pathlib.Path.cwd()
 sys.path.append(os.path.join(now_dir))
 
 # Zluda hijack
@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 
 # Load config
 config = Config()
-mp.set_start_method("spawn", force=True)
+# Note: multiprocessing removed for HF Spaces compatibility
+# (to avoid daemon process issues with ProcessPoolExecutor)
 
 
 class FeatureInput:
@@ -94,7 +95,7 @@ class FeatureInput:
     def process_file(self, file_info, f0_method, hop_length):
         inp_path, opt_path_coarse, opt_path_full, _ = file_info
 
-        if os.path.exists(opt_path_coarse) and os.path.exists(opt_path_full):
+        if pathlib.Path(opt_path_coarse).exists() and pathlib.Path(opt_path_full).exists():
             return
 
         try:
@@ -157,20 +158,17 @@ def run_pitch_extraction(
         )
     else:
         actual_threads = threads
-    with concurrent.futures.ProcessPoolExecutor(max_workers=len(devices)) as executor:
-        tasks = [
-            executor.submit(
-                fe.process_files,
-                files[i :: len(devices)],
-                f0_method,
-                hop_length,
-                devices[i],
-                actual_threads // len(devices),
-            )
-            for i in range(len(devices))
-        ]
-        for future in concurrent.futures.as_completed(tasks):
-            future.result()  # Properly waits and propagates exceptions
+
+    # Process sequentially per device to avoid multiprocessing in daemon processes
+    # (required for HF Spaces compatibility)
+    for i in range(len(devices)):
+        fe.process_files(
+            files[i :: len(devices)],
+            f0_method,
+            hop_length,
+            devices[i],
+            actual_threads // len(devices) if len(devices) > 0 else actual_threads,
+        )
 
     logger.info("Pitch extraction completed in %.2f seconds.", time.time() - start_time)
 
@@ -189,7 +187,7 @@ def process_file_embedding(
 
     def worker(file_info):
         wav_file_path, _, _, out_file_path = file_info
-        if os.path.exists(out_file_path):
+        if pathlib.Path(out_file_path).exists():
             return
         feats = torch.from_numpy(load_audio(wav_file_path, 16000)).to(device).float()
         feats = feats.view(1, -1)
@@ -222,21 +220,19 @@ def run_embedding_extraction(
         devices_str,
     )
     start_time = time.time()
-    with concurrent.futures.ProcessPoolExecutor(max_workers=len(devices)) as executor:
-        tasks = [
-            executor.submit(
-                process_file_embedding,
-                files[i :: len(devices)],
-                embedder_model,
-                embedder_model_custom,
-                i,
-                devices[i],
-                threads // len(devices),
-            )
-            for i in range(len(devices))
-        ]
-        for future in concurrent.futures.as_completed(tasks):
-            future.result()  # Properly waits and propagates exceptions
+
+    # Process sequentially per device to avoid multiprocessing in daemon processes
+    # (required for HF Spaces compatibility)
+    for i in range(len(devices)):
+        process_file_embedding(
+            files[i :: len(devices)],
+            embedder_model,
+            embedder_model_custom,
+            i,
+            devices[i],
+            threads // len(devices) if len(devices) > 0 else threads,
+        )
+
     logger.info(
         "Embedding extraction completed in %.2f seconds.",
         time.time() - start_time,
@@ -249,12 +245,9 @@ def initialize_extraction(
     embedder_model: str,
 ) -> list[list[str]]:
     wav_path = os.path.join(exp_dir, "sliced_audios_16k")
-    os.makedirs(os.path.join(exp_dir, f"f0_{f0_method}"), exist_ok=True)
-    os.makedirs(os.path.join(exp_dir, f"f0_{f0_method}_voiced"), exist_ok=True)
-    os.makedirs(
-        os.path.join(exp_dir, f"{embedder_model}_extracted"),
-        exist_ok=True,
-    )
+    pathlib.Path(os.path.join(exp_dir, f"f0_{f0_method}")).mkdir(exist_ok=True, parents=True)
+    pathlib.Path(os.path.join(exp_dir, f"f0_{f0_method}_voiced")).mkdir(exist_ok=True, parents=True)
+    pathlib.Path(os.path.join(exp_dir, f"{embedder_model}_extracted")).mkdir(exist_ok=True, parents=True)
 
     files: list[list[str]] = []
     for file in glob.glob(os.path.join(wav_path, "*.wav")):
@@ -280,12 +273,12 @@ def update_model_info(
     custom_embedder_model_hash: str | None,
 ) -> None:
     file_path = os.path.join(exp_dir, "model_info.json")
-    if os.path.exists(file_path):
-        with open(file_path) as f:
+    if pathlib.Path(file_path).exists():
+        with pathlib.Path(file_path).open() as f:
             data = json.load(f)
     else:
         data = {}
     data["embedder_model"] = embedder_model
     data["custom_embedder_model_hash"] = custom_embedder_model_hash
-    with open(file_path, "w") as f:
+    with pathlib.Path(file_path).open("w") as f:
         json.dump(data, f, indent=4)
