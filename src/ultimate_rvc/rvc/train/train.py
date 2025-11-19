@@ -193,6 +193,46 @@ def main(
 
     def start() -> None:
         """Start the training process with multi-GPU support or CPU."""
+        # Check if we're in a daemon process (e.g., HF Spaces with @spaces.GPU)
+        # Daemon processes cannot spawn child processes
+        current_process = mp.current_process()
+        is_daemon = current_process.daemon if hasattr(current_process, "daemon") else False
+
+        if is_daemon:
+            # Running in daemon process (e.g., HF Spaces) - run directly without multiprocessing
+            logger.info(
+                "Detected daemon process environment (e.g., Hugging Face Spaces). "
+                "Running single-GPU training without multiprocessing."
+            )
+            # Use first GPU or CPU
+            device_id = list(gpus)[0] if gpus else 0
+            # Call run directly without spawning a child process
+            # Note: we skip distributed training setup in this case
+            run_single_process(
+                experiment_dir,
+                pretrain_g,
+                pretrain_d,
+                total_epoch,
+                save_every_weights,
+                config,
+                device,
+                device_id,
+                model_name,
+                sample_rate,
+                vocoder,
+                batch_size,
+                save_every_epoch,
+                save_only_latest,
+                overtraining_detector,
+                overtraining_threshold,
+                checkpointing,
+                cache_data_in_gpu,
+                global_gen_loss,
+                global_disc_loss,
+            )
+            return
+
+        # Normal multi-process training
         children = []
         pid_data = {"process_pids": []}
         with pathlib.Path(config_save_path).open() as pid_file:
@@ -270,6 +310,62 @@ def main(
     start()
 
 
+def run_single_process(
+    experiment_dir,
+    pretrain_g,
+    pretrain_d,
+    custom_total_epoch,
+    custom_save_every_weights,
+    config,
+    device,
+    device_id,
+    model_name,
+    sample_rate,
+    vocoder,
+    batch_size,
+    save_every_epoch,
+    save_only_latest,
+    overtraining_detector,
+    overtraining_threshold,
+    checkpointing,
+    cache_data_in_gpu,
+    global_gen_loss,
+    global_disc_loss,
+):
+    """
+    Run training in single-process mode without distributed training.
+
+    This is used when running in daemon processes (e.g., HF Spaces)
+    where multiprocessing is not allowed.
+    """
+    # Call run with rank=0, n_gpus=1, and skip_distributed_init=True
+    run(
+        rank=0,
+        n_gpus=1,
+        experiment_dir=experiment_dir,
+        pretrain_g=pretrain_g,
+        pretrain_d=pretrain_d,
+        custom_total_epoch=custom_total_epoch,
+        custom_save_every_weights=custom_save_every_weights,
+        config=config,
+        device=device,
+        device_id=device_id,
+        model_name=model_name,
+        sample_rate=sample_rate,
+        vocoder=vocoder,
+        batch_size=batch_size,
+        save_every_epoch=save_every_epoch,
+        save_only_latest=save_only_latest,
+        overtraining_detector=overtraining_detector,
+        overtraining_threshold=overtraining_threshold,
+        checkpointing=checkpointing,
+        cache_data_in_gpu=cache_data_in_gpu,
+        global_gen_loss=global_gen_loss,
+        global_disc_loss=global_disc_loss,
+        skip_distributed_init=True,
+    )
+
+
 def run(
     rank,
     n_gpus,
@@ -293,6 +389,7 @@ def run(
     cache_data_in_gpu,
     global_gen_loss,
     global_disc_loss,
+    skip_distributed_init=False,
 ):
     """
     Runs the training loop on a specific GPU or CPU.
@@ -307,6 +404,7 @@ def run(
         custom_save_every_weights (int): The interval (in epochs) at which to save model weights.
         config (object): Configuration object containing training parameters.
         device (torch.device): The device to use for training (CPU or GPU).
+        skip_distributed_init (bool): Skip distributed training initialization (for single-process mode).
 
     """
     global global_step, optimizer, lowest_d_value, lowest_g_value, consecutive_increases_gen, consecutive_increases_disc
@@ -317,12 +415,13 @@ def run(
         writer_eval = None
 
     # Initialize distributed training environment for child node.
-    dist.init_process_group(
-        backend="gloo" if sys.platform == "win32" or device.type != "cuda" else "nccl",
-        init_method="env://",
-        world_size=n_gpus if device.type == "cuda" else 1,
-        rank=rank if device.type == "cuda" else 0,
-    )
+    if not skip_distributed_init:
+        dist.init_process_group(
+            backend="gloo" if sys.platform == "win32" or device.type != "cuda" else "nccl",
+            init_method="env://",
+            world_size=n_gpus if device.type == "cuda" else 1,
+            rank=rank if device.type == "cuda" else 0,
+        )
 
     torch.manual_seed(config.train.seed)
 
