@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import lazy_loader as lazy
+import spaces
 
 import logging
 import operator

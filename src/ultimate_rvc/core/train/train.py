@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import signal
+import spaces
 
 from ultimate_rvc.core.common import (
     TRAINING_MODELS_DIR,
@@ -141,7 +142,7 @@ def _get_pretrained_model(
 
     return pg, pd
 
-
+@spaces.GPU(duration=120)
 def run_training(
     model_name: str,
     num_epochs: int = 500,

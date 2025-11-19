@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import lazy_loader as lazy
-
+import spaces
 import logging
 from functools import cache, reduce
 from pathlib import Path
@@ -257,7 +257,7 @@ def _get_voice_converter() -> VoiceConverter:
 
     return VoiceConverter()
 
-
+@spaces.GPU(duration=120)
 def convert(
     audio_track: StrPath,
     directory: StrPath,
