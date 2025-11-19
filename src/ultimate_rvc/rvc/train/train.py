@@ -153,10 +153,10 @@ def main(
     experiment_dir = os.path.join(TRAINING_MODELS_DIR, model_name)
     config_save_path = os.path.join(experiment_dir, "config.json")
 
-    # Use a Manager to create a shared list
-    manager = mp.Manager()
-    global_gen_loss = manager.list([0] * total_epoch)
-    global_disc_loss = manager.list([0] * total_epoch)
+    # Use shared memory arrays instead of Manager to avoid spawning
+    # a manager process (which fails in daemon processes like HF Spaces)
+    global_gen_loss = mp.Array("d", total_epoch)
+    global_disc_loss = mp.Array("d", total_epoch)
 
     with pathlib.Path(config_save_path).open() as f:
         config = json.load(f)

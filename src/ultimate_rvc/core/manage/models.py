@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import lazy_loader as lazy
 
+import os
 import re
 import shutil
 import urllib.request
@@ -302,7 +303,7 @@ def _extract_voice_model(
             zip_ref.extractall(extraction_path)
         file_path_map = {
             ext: Path(root, name)
-            for root, _, files in extraction_path.walk()
+            for root, _, files in os.walk(extraction_path)
             for name in files
             for ext in [".index", ".pth"]
             if Path(name).suffix == ext
@@ -566,7 +567,7 @@ def _extract_custom_embedder_model(
             zip_ref.extractall(extraction_path)
         file_path_map = {
             file: Path(root, file)
-            for root, _, files in extraction_path.walk()
+            for root, _, files in os.walk(extraction_path)
             for file in files
             if file in {"pytorch_model.bin", "config.json"}
         }
