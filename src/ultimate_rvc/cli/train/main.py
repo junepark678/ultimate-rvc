@@ -565,30 +565,37 @@ def run_training(
     start_time = time.perf_counter()
 
     gpu_id_set = set(gpu_id) if gpu_id is not None else None
-    trained_model_files = _run_training(
-        model_name=model_name,
-        num_epochs=num_epochs,
-        batch_size=batch_size,
-        detect_overtraining=detect_overtraining,
-        overtraining_threshold=overtraining_threshold,
-        vocoder=vocoder,
-        index_algorithm=index_algorithm,
-        pretrained_type=pretrained_type,
-        custom_pretrained=custom_pretrained,
-        save_interval=save_interval,
-        save_all_checkpoints=save_all_checkpoints,
-        save_all_weights=save_all_weights,
-        clear_saved_data=clear_saved_data,
-        upload_model=upload_model,
-        upload_name=upload_name,
-        hardware_acceleration=hardware_acceleration,
-        gpu_ids=gpu_id_set,
-        preload_dataset=preload_dataset,
-        reduce_memory_usage=reduce_memory_usage,
-    )
-    if trained_model_files is None:
-        rprint("[!] Training failed!")
-        return
+    while True:
+        try:
+            trained_model_files = _run_training(
+                model_name=model_name,
+                num_epochs=num_epochs,
+                batch_size=batch_size,
+                detect_overtraining=detect_overtraining,
+                overtraining_threshold=overtraining_threshold,
+                vocoder=vocoder,
+                index_algorithm=index_algorithm,
+                pretrained_type=pretrained_type,
+                custom_pretrained=custom_pretrained,
+                save_interval=save_interval,
+                save_all_checkpoints=save_all_checkpoints,
+                save_all_weights=save_all_weights,
+                clear_saved_data=clear_saved_data,
+                upload_model=upload_model,
+                upload_name=upload_name,
+                hardware_acceleration=hardware_acceleration,
+                gpu_ids=gpu_id_set,
+                preload_dataset=preload_dataset,
+                reduce_memory_usage=reduce_memory_usage,
+            )
+            if trained_model_files is None:
+                rprint("[!] Training failed!")
+                return
+        except:
+            rprint("[!] Training failed! Retrying...")
+            continue
+        break
+
     model_file, index_file = trained_model_files
 
     rprint("[+] Voice model succesfully trained!")

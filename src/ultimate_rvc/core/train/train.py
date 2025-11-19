@@ -144,7 +144,7 @@ def _get_pretrained_model(
     return pg, pd
 
 
-@spaces.GPU(duration=3600)
+@spaces.GPU(duration=120)
 def run_training(
     model_name: str,
     num_epochs: int = 500,
