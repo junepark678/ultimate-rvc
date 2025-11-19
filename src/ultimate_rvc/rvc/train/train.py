@@ -54,7 +54,8 @@ logger = logging.getLogger(__name__)
 
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = True
-torch.multiprocessing.set_start_method("spawn", force=True)
+# Note: multiprocessing start method disabled for HF Spaces compatibility
+# torch.multiprocessing.set_start_method("spawn", force=True)
 os.environ["USE_LIBUV"] = "0" if sys.platform == "win32" else "1"
 
 randomized = True
@@ -446,16 +447,21 @@ def run(
         shuffle=True,
     )
 
-    train_loader = DataLoader(
-        train_dataset,
-        num_workers=4,
-        shuffle=False,
-        pin_memory=True,
-        collate_fn=collate_fn,
-        batch_sampler=train_sampler,
-        persistent_workers=True,
-        prefetch_factor=8,
-    )
+    # Disable multiprocessing in daemon processes (HF Spaces compatibility)
+    num_workers = 0 if skip_distributed_init else 4
+    dataloader_kwargs = {
+        "num_workers": num_workers,
+        "shuffle": False,
+        "pin_memory": True,
+        "collate_fn": collate_fn,
+        "batch_sampler": train_sampler,
+    }
+    # persistent_workers and prefetch_factor require num_workers > 0
+    if num_workers > 0:
+        dataloader_kwargs["persistent_workers"] = True
+        dataloader_kwargs["prefetch_factor"] = 8
+
+    train_loader = DataLoader(train_dataset, **dataloader_kwargs)
     if len(train_loader) < 3:
         logger.error(
             "Not enough data in the training set. Perhaps you forgot to slice the"

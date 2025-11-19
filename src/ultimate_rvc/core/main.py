@@ -52,12 +52,14 @@ def download_sample_models() -> None:
 
 def initialize() -> None:
     """Initialize the Ultimate RVC project."""
-    prequisites_download_pipeline(exe=False)
     if not FLAG_FILE.is_file():
+        # Only run initialization on first startup
+        prequisites_download_pipeline(exe=False)
         # NOTE we only add_paths so that sox
         # binaries are downloaded as part of initialization.
         static_sox.add_paths(weak=True)
-        download_sample_models()
+        # Note: Sample model download disabled by default
+        # download_sample_models()
         initialize_audio_separator()
         FLAG_FILE.touch()
 
