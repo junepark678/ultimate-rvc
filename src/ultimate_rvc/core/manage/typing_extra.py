@@ -6,10 +6,10 @@ ultimate_rvc.core.manage package.
 from __future__ import annotations
 
 from collections.abc import Callable
-from enum import StrEnum
 
 from pydantic import BaseModel, RootModel
 
+from ultimate_rvc.compat import StrEnum
 from ultimate_rvc.typing_extra import PretrainedSampleRate
 
 

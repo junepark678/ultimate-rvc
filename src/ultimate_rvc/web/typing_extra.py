@@ -8,7 +8,9 @@ from __future__ import annotations
 from typing import Any, TypeAlias, TypedDict
 
 from collections.abc import Callable, Sequence
-from enum import StrEnum, auto
+from enum import auto
+
+from ultimate_rvc.compat import StrEnum
 
 AnyCallable: TypeAlias = Callable[..., Any]
 

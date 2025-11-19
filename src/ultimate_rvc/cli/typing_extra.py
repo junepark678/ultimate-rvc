@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
+from ultimate_rvc.compat import StrEnum
 
 
 class PanelName(StrEnum):

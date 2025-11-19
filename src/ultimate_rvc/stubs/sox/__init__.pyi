@@ -1,8 +1,8 @@
-from typing import Self
-
 from pathlib import Path
 
 from numpy.typing import NDArray
+
+from ultimate_rvc.compat import Self
 
 class Transformer:
     def pitch(

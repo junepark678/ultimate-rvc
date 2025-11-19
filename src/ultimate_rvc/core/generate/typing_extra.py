@@ -7,9 +7,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from enum import StrEnum, auto
+from enum import auto
 
 from pydantic import BaseModel, ConfigDict
+
+from ultimate_rvc.compat import StrEnum
 
 # NOTE these types are used at runtime by pydantic so cannot be
 # relegated to a IF TYPE_CHECKING block

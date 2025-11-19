@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-from enum import StrEnum
+from ultimate_rvc.compat import StrEnum
 
 if TYPE_CHECKING:
     from ultimate_rvc.typing_extra import PretrainedSampleRate, StrPath

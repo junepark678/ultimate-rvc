@@ -39,7 +39,7 @@ def get_config_names() -> list[str]:
     return get_items(CONFIG_DIR)
 
 
-def load_config(name: str, config_class: type[T]) -> T:  # noqa: UP047
+def load_config(name: str, config_class: type[T]) -> T:
     """
     Load a configuration from a JSON file into a Pydantic model.
 

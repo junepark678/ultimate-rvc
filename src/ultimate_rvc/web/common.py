@@ -41,7 +41,7 @@ P = ParamSpec("P")
 U = TypeVar("U", bound=SongTransferOption | SpeechTransferOption)
 
 
-def exception_harness(  # noqa: UP047
+def exception_harness(
     fn: Callable[P, T],
     info_msg: str | None = None,
 ) -> Callable[P, T]:
@@ -83,7 +83,7 @@ def exception_harness(  # noqa: UP047
     return _wrapped_fn
 
 
-def confirmation_harness(  # noqa: UP047
+def confirmation_harness(
     fn: Callable[P, T],
 ) -> Callable[Concatenate[bool, P], T]:
     """
@@ -692,7 +692,7 @@ def setup_delete_event(
     ).success(partial(render_msg, success_msg), outputs=outputs, show_progress="hidden")
 
 
-def save_total_config_values(name: str, *values: *tuple[Any, ...]) -> None:
+def save_total_config_values(name: str, *values: Any) -> None:  # noqa: ANN401
     """
     Save the provided component values to a total configuration model
     and write it to a JSON file with the provided name.
@@ -702,7 +702,7 @@ def save_total_config_values(name: str, *values: *tuple[Any, ...]) -> None:
     name : str
         The name of the JSON file to write the total configuration model
         to.
-    *values : *tuple[Any, ...]
+    *values : Any
         The component values to save to the total configuration model.
 
     """

@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import TypeAlias
 
 from collections.abc import Mapping, Sequence
-from enum import IntEnum, StrEnum
 from os import PathLike
+
+from ultimate_rvc.compat import IntEnum, StrEnum
 
 StrPath: TypeAlias = str | PathLike[str]
 

@@ -8,10 +8,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import lazy_loader as lazy
-import spaces
+
 import logging
 from functools import cache, reduce
 from pathlib import Path
+
+import spaces
 
 from rich import print as rprint
 
@@ -256,6 +258,7 @@ def _get_voice_converter() -> VoiceConverter:
     from ultimate_rvc.rvc.infer.infer import VoiceConverter  # noqa: PLC0415
 
     return VoiceConverter()
+
 
 @spaces.GPU(duration=120)
 def convert(

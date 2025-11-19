@@ -1,4 +1,6 @@
-from typing import Any, Self
+from typing import Any
+
+from ultimate_rvc.compat import Self
 
 class YoutubeDL:
     def __init__(

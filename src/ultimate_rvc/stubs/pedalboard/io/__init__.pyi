@@ -1,7 +1,9 @@
-from typing import Literal, Self, overload
+from typing import Literal, overload
 
 import numpy as np
 from numpy.typing import NDArray
+
+from ultimate_rvc.compat import Self
 
 class AudioFile:
     @classmethod
