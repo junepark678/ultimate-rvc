@@ -10,13 +10,13 @@ from __future__ import annotations
 import sys
 from enum import Enum
 
-# Import Self from typing or typing_extensions
+# Import Self and Unpack from typing or typing_extensions
 if sys.version_info >= (3, 11):
-    from typing import Self
+    from typing import Self, Unpack
 
     from enum import IntEnum, StrEnum
 else:
-    from typing_extensions import Self
+    from typing_extensions import Self, Unpack
 
     class StrEnum(str, Enum):
         """
@@ -96,4 +96,4 @@ else:
     # IntEnum is available in Python 3.10, so just re-export it
     from enum import IntEnum
 
-__all__ = ["IntEnum", "Self", "StrEnum"]
+__all__ = ["IntEnum", "Self", "StrEnum", "Unpack"]

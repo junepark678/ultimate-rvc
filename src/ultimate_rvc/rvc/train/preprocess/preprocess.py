@@ -286,13 +286,27 @@ def process_audio_wrapper(args):
 
 
 def get_file_hash(file: str, size: int = 5) -> str:
+    """
+    Calculate the hash of a file using BLAKE2b.
 
+    Parameters
+    ----------
+    file : str
+        Path to the file to hash.
+    size : int, default=5
+        Digest size for BLAKE2b.
+
+    Returns
+    -------
+    str
+        The hexadecimal hash of the file.
+
+    """
+    hasher = hashlib.blake2b(digest_size=size)
     with open(file, "rb") as fp:
-        file_hash = hashlib.file_digest(
-            fp,
-            lambda: hashlib.blake2b(digest_size=size),  # type: ignore[reportArgumentType]
-        )
-    return file_hash.hexdigest()
+        for chunk in iter(lambda: fp.read(8192), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 def preprocess_training_set(

@@ -1,6 +1,8 @@
-from typing import TYPE_CHECKING, Unpack
+from typing import TYPE_CHECKING
 
 import logging
+
+from ultimate_rvc.compat import Unpack
 import os
 import pathlib
 import sys

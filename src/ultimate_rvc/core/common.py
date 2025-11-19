@@ -260,12 +260,11 @@ def get_file_hash(file: StrPath, size: int = 5) -> str:
         The hash of the file.
 
     """
+    hasher = hashlib.blake2b(digest_size=size)
     with Path(file).open("rb") as fp:
-        file_hash = hashlib.file_digest(
-            fp,
-            lambda: hashlib.blake2b(digest_size=size),  # type: ignore[reportArgumentType]
-        )
-    return file_hash.hexdigest()
+        for chunk in iter(lambda: fp.read(8192), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 def get_combined_file_hash(files: Sequence[StrPath], size: int = 5) -> str:
